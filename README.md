@@ -1,2 +1,2 @@
 # hitman
-A slackbot hitman gm
+A group assassination game
