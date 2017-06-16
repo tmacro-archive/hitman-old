@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}
+	Uh Oh!?
+{% endblock %}
+
+{% block content %}
+	<div sclass="section">
+		<div class="row ">
+			<div class="col s12 m8 offset-m2">
+				<span style="visibility:hidden">I'm some spacing</span>
+				</div>
+			<div class="col s12 m6 offset-m3">
+				<div class="card grey lighten-2 grey-text text-darken-3">
+					<div class="card-content">
+						<span class="card-title">{{ title }}</span>
+						<p>
+							{{ content }}
+							<br><br>
+							Simply use the below command to register
+							<div class="card-panel">
+								@imontoya register
+						</p>
+					</div>
+					<div class="card-action green-text text-accent-3">
+						<a href="https://42schoolusa.slack.com/messages/@imontoya" class="green-text text-accent-3">Click Here</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}

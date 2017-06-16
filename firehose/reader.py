@@ -1,6 +1,6 @@
-from hitman.util.config import config
-from hitman.util.log import getLogger
-from hitman.util.pubsub import Publisher
+from util.config import config
+from util.log import getLogger
+from pubsub import Publisher
 from slackclient import SlackClient
 import time
 from Queue import Queue
@@ -134,11 +134,12 @@ class TrueFilter(Filter):
 		return True
 
 cmd_filter = RegexFilter(text = '^![a-z]+', id = 'CMD_FILTER', topic = 'cmd')
-dm_filter = ChannelFilter(type = 'message', id = "DM_FILTER", topic = "ch_")
-r = Reader(config.apiSlack.token)
+ch_filter = ChannelFilter(type = 'message', id = "CH_FILTER", topic = "ch_")
+msg_filter = Filter(type = 'message', id = 'MSG_FILTER', topic = 'msg')
+r = Reader(config.crypto.slack)
 r.start()
-s = Stream(cmd_filter, dm_filter)
-p = Publisher('ipc://.hitman_events.sock')
+s = Stream(cmd_filter, ch_filter, msg_filter)
+p = Publisher('tcp://*:6400')
 p.open()
 for event, topics in s(r.events):
 	if topics:

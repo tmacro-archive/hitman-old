@@ -1,67 +1,27 @@
-import requests
-from bs4 import BeautifulSoup
+from flask import Blueprint, request, url_for, session, jsonify
+from ..app import db
+from ..models import User
 from ..util.config import config
-from slackclient import SlackClient
-auth_token = config.apiSlack.token
-default_data = dict(token=auth_token)
+from ..util.log import getLogger
+from ..util.crypto import check_token, expiring_token
 
-def build_url(ext):
-	return config.apiSlack.base + ext
+_log = getLogger('api.slack')
 
-def reqOk(resp):
-	if resp.json() and resp.json().get('ok'):
-		return True
-	return False
+slack_app = Blueprint('slack', __name__)
 
-class Slack:
-	@staticmethod
-	def _get_dms():
-		resp = requests.post(build_url(config.apiSlack.dm_list),
-							data = default_data)
-		if resp.json().get('ok'):
-			return resp.json().get('ims')
-
-	@staticmethod
-	def _get_dm_user(user):
-		for dm in Slack._get_dms():
-			if dm['user'] == user:
-				return dm['id']
-	
-	@staticmethod
-	def _get_user_id(user):
-		resp = requests.post(build_url(config.apiSlack.user_list),
-							data = default_data)
-		if resp.json().get('ok'):
-			users = resp.json().get('members')
-			for u in users:
-				if u['name'] == user:
-					return u['id']
-
-	@staticmethod
-	def _create_dm(user):
-		data = dict(user=user)
-		data.update(default_data)
-		resp = requests.post(build_url(config.apiSlack.dm_new),
-							data = data)
-		if reqOk(resp):
-			return resp.json().get('channel', {}).get('id')
-		return None
-
-	@staticmethod
-	def dm(user, message):
-		user_id = Slack._get_user_id(user)
-		if not user_id:
-			raise Exception('could not resolve user.')
-		dm = Slack._get_dm_user(user_id)
-		if not dm:
-			dm = Slack._create_dm(user_id)
-		if not dm:
-			raise Exception('could not create direct message.')
-		data = dict(channel = dm, text = message)
-		data.update(default_data)
-		resp = requests.post(build_url(config.apiSlack.post_msg),
-							data = data)
-		if reqOk(resp):
-			return True
-		return False
+@slack_app.route('/register', methods = ['POST'])
+def register():
+	data = request.json
+	if not data or not data.get('slack'):
+		return '501' # Malformed request
+	slack_user = data.get('slack')
+	user = User.from_slack(slack_user)
+	if user:
+		return '503'# slack user already assigned
+	user = User(slack = slack_user)
+	db.session.add(user)
+	db.session.commit()
+	reg_token = expiring_token(user.secret, user.key)
+	reg_url = url_for('auth.register', user = slack_user, token = reg_token, _external = True)
+	return jsonify(dict(success = True, url = reg_url))
 

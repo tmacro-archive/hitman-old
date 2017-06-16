@@ -3,9 +3,9 @@ import threading
 import json
 import time
 from collections import defaultdict
-from util.log import getLogger
+from .log import getLogger
 moduleLogger = getLogger(__name__)
-
+_log = moduleLogger
 class HandlerNotFound(Exception):
 	pass
 
@@ -130,6 +130,7 @@ class Subscriber(Transport):
 	def addHandler(self, topic, func, mapping = {}, strict = True): #mapping defines optional a required arguements eg {'foo': True, 'bar': False}
 		self._handlers[topic].append(dict(func = func, args = mapping, strict = strict))
 		self._subscribe(topic)
+		self._log.debug('Registering handler for %s'%topic)
 	
 	def _subscribe(self, topic):
 		self._socket.setsockopt_string(zmq.SUBSCRIBE, topic)
@@ -179,3 +180,9 @@ class Publisher(Transport):
 	def publish(self, topic, event):
 		msg = Event(topic, event)
 		return self._publish(msg)
+
+class Handler:
+	def __init__(self):
+		self._log = _log.getChild('handler')
+	def __call__(self, message):
+		_log.debug('recieved message %s'%str(message))
