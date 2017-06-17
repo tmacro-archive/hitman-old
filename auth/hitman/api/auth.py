@@ -39,7 +39,7 @@ def register():
 	session['slack_token'] = slack_token
 	if not ft_token: # redirect to 42 oauth page
 		_llog.debug('User has not logged into 42 yet, redirecting...')
-		# return oauth42.authorize(callback=url_for('auth.authorized', _external = True))
+		return oauth42.authorize(callback=url_for('auth.authorized', _external = True))
 		return None
 	if not check_token(ft_user.secret, ft_user.key, slack_token):
 		_llog.debug('slack_token is invalid?? redirecting to "signup page"')
@@ -57,6 +57,7 @@ def register():
 		ft_user.slack_confirmed = True
 		db.session.add(ft_user)
 		db.session.commit()
+		resp = requests.post(config.api.gygax, params = dict(user=ft_user.slack,uid=ft_user.uid, valid=True))
 		_llog.debug('associated intra: %s with slack: %s'%(ft_user.uid, ft_user.slack))
 	else:
 		_llog.error('Error communicating with intra status: %s error')

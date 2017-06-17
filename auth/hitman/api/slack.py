@@ -11,13 +11,13 @@ slack_app = Blueprint('slack', __name__)
 
 @slack_app.route('/register', methods = ['POST'])
 def register():
-	data = request.json
+	data = request.args
 	if not data or not data.get('slack'):
 		return '501' # Malformed request
 	slack_user = data.get('slack')
 	user = User.from_slack(slack_user)
 	if user:
-		return '503'# slack user already assigned
+		return jsonify(dict(success = False, error = 'Already Registered'))
 	user = User(slack = slack_user)
 	db.session.add(user)
 	db.session.commit()

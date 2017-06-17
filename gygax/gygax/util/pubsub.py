@@ -53,7 +53,10 @@ class Transport(threading.Thread):
 		self._path = path
 		self._exit = threading.Event()
 		self._watched = False
+		self.__socket_lck = threading.Lock()
+		self._event_id = 0
 		super(Transport, self).__init__()
+		self.daemon = True
 
 	def open(self):
 		self._log.debug('opening socket')
@@ -86,8 +89,10 @@ class Transport(threading.Thread):
 			return None
 		except ValueError:
 			raise RPCError('Malformed message body')
-		self._log.debug('recieved message %s'%data)
-		self._log.debug('returning Event')
+		self._log.debug('recieved event %s on topic:%s'%(self._event_id, topic))
+		with open('test.txt', 'a') as f:
+			f.write('%s %s\n'%(self._event_id, time.time()))
+		self._event_id += 1
 		return Event(topic, msg)
 
 	def _send(self, msg):
@@ -107,13 +112,13 @@ class Transport(threading.Thread):
 		self.start()
 
 	def run(self):
-		self._log.debug('watching for data')
+		self._log.debug('Watching for data...')
 		while not self._exit.isSet():
 			message = self._recv(noError = True)
 			if message:
-				self._log.debug('message recieved')
 				self._handler(message)
 			else:
+				message = None
 				time.sleep(1)
 
 class Subscriber(Transport):

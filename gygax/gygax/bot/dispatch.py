@@ -18,8 +18,32 @@ class Event:
 	@property
 	def topic(self):
 		return self._topic
-
 	
+	@topic.setter
+	def topic(self, topic):
+		self._topic = topic
+
+	def data(self, data = None, overwrite = False):
+		if not data and  not overwrite:
+			return self._data.copy()
+		data = data if not data is None else {}
+		if overwrite:
+			self._data = data
+		else:
+			self._data.update(data)
+			
+
+class Proxy:
+	def __init__(self, disp, queue):
+		self.__disp = disp
+		self.__queue = queue
+	
+	def register(self, *args, **kwargs):
+		return self.__disp.register(*args, **kwargs)
+
+	def put(self, event):
+		self.__queue(event)
+
 class Dispatcher:
 	'''
 		this object manages a list of handlers and associated
@@ -38,14 +62,14 @@ class Dispatcher:
 			for handler in self._handlers[event.type][event.topic]:
 				handler(event)
 				found = True
-			if not event.topic is None:
+			if not event.topic == None:
 				for handler in self._handlers[event.type][None]:
-					handler(even)
+					handler(event)
 		return found
 
-	def _register(self, type, topic, handler):
+	def _register(self, type, topic, handler, oneshot = False):
 		with self.__lock:
 			self._handlers[type][topic].append(handler)
 
-	def register(self, type, topic, handler):
-		self._register(type, topic, handler)
+	def register(self, type, topic, handler, oneshot = False):
+		self._register(type, topic, handler, oneshot)
