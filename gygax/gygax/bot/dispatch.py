@@ -2,6 +2,9 @@ from queue import Queue
 from .const import EVENT_TYPES as ETYPES
 from collections import defaultdict
 from threading import Lock
+from ..util.log import getLogger
+
+_log = getLogger('dispatch')
 
 class Event:
 	type = ETYPES.BASE
@@ -60,8 +63,12 @@ class Dispatcher:
 		found = False
 		with self.__lock:
 			for handler in self._handlers[event.type][event.topic]:
-				handler(event)
-				found = True
+				try:
+					handler(event)
+					found = True
+				except Exception as e:
+					_log.error('Handler for event %s threw an exception'%(event.type, event.topic))
+					_log.exception(e)
 			if not event.topic == None:
 				for handler in self._handlers[event.type][None]:
 					handler(event)

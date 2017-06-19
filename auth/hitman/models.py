@@ -1,40 +1,23 @@
 from .app import db
-from .util.crypto import rand_key
-
-assigned_hits = db.Table('assigned_hits',
-				db.Column('hit_id', db.Integer, db.ForeignKey('hit.id')),
-				db.Column('user_id', db.Integer, db.ForeignKey('user.id'))
-)
-
-targeted_users = db.Table('targeted_users',
-				db.Column('hit_id', db.Integer, db.ForeignKey('hit.id')),
-				db.Column('user_id', db.Integer, db.ForeignKey('user.id'))
-)
+from .util.crypto import rand_key, expiring_token, check_token, token_ttl
 
 class User(db.Model):
 	id = db.Column(db.Integer, primary_key = True)
 	uid = db.Column(db.Text, unique = True)
 	slack = db.Column(db.String(21), unique = True)
-	slack_confirmed = db.Column(db.Boolean, default = False)
 	key = db.Column(db.String(128))
 	secret = db.Column(db.String(128))
 	ft_oauth_key = db.Column(db.String(64))
 	ft_oauth_refresh = db.Column(db.String(64))
-	assigned = db.relationship("Hit",
-							secondary=assigned_hits,
-							backref="assigned")
+	confirmed = db.Column(db.Boolean(), default = False)
+
 	def __init__(self, uid = None, slack = None):
 		if not uid and not slack:
 			raise Exception('You must provide either uid or slack')
-		if uid:
-			self.uid = uid
-		if slack:
-			self.slack = slack
+		self.uid = uid
+		self.slack = slack
 		self.key = rand_key()
 		self.secret = rand_key()
-
-	def check(self, pwd):
-		return hashlib.sha256(pwd).hexdigest() == self.pwd
 
 	@staticmethod
 	def from_uid(uid):
@@ -44,34 +27,10 @@ class User(db.Model):
 	def from_slack(slack):
 		return User.query.filter_by(slack = slack).first()
 
-class Location(db.Model):
-	id = db.Column(db.Integer, primary_key = True)
-	desc = db.Column(db.Text)
+	def token(self, extra = {}, expires = None, ttl = token_ttl):
+		return expiring_token(self.secret, self.key, extra, expires, ttl)
+	
+	def check(self, token):
+		return check_token(self.secret, self.key, token)
 
-	def __init__(self, desc):
-		self.desc = desc
-
-class Weapon(db.Model):
-	id = db.Column(db.Integer, primary_key = True)
-	desc = db.Column(db.Text)
-
-	def __init__(self, desc):
-		self.desc = desc
-
-class Hit(db.Model):
-	id = db.Column(db.Integer, primary_key = True)
-	target_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-	target = db.relationship('User', backref='hits')
-	weapon_id = db.Column(db.Integer, db.ForeignKey('weapon.id'))
-	weapon = db.relationship('Weapon')
-	location_id = db.Column(db.Integer, db.ForeignKey('location.id'))	
-	location = db.relationship('Location')
-	conf_code = db.Column(db.String(16))
-	status = db.Column(db.Integer, default = 0)
-
-	def __init__(self, user, target, weapon, location):
-		self.assigned = user
-		self.target = target
-		self.weapon = weapon
-		self.location = location
-		self.conf_code = utils.gen_confirmation_code()
+	

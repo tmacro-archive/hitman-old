@@ -4,7 +4,6 @@ from gygax.app import agent, slack, db
 from gygax.models import User, Weapon, Location, Slack, Base
 from gygax.util.http import http
 Base.metadata.create_all(db)
-print('built')
 agent.start()
 slack.start()
 http.start()

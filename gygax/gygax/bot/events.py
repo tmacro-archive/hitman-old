@@ -71,4 +71,5 @@ class SendMessageEvent(MessageEvent):
 	@property
 	def args(self):
 		return self._get('args')
+
 	

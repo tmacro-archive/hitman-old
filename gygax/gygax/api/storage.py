@@ -28,7 +28,7 @@ def session(f):
 				session.close()
 				return ret[2]
 		if ret[1] is None:
-			if len(ret[0]) == 1:
+			if not ret[0] is None and len(ret[0]) == 1:
 				return ret[0][0]
 			return ret[0]
 		return ret[1]
@@ -70,7 +70,7 @@ def create_user(session, **kwargs):
 	return [u], None
 	
 @session
-def validate_slack(session, slack, uid):
+def validate_slack(session, slack, uid = None):
 	user = from_slack(slack)
 	if user:
 		user.slack.confirmed = True

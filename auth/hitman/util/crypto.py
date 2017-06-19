@@ -42,15 +42,15 @@ def expiring_token(secret, key, extra = None, exp = None, ttl = token_ttl):
 	_log.debug('Generated token %s for %s, expire: %s'%(token, h512(secret), expiration))
 	return enc64(token)
 
-def check_token(secret, key, token):
+def check_token(secret, key, token, extra = None):
 	try:
 		data = json.loads(dec64(token))
 		_log.debug(data)
 		if 'sig' in data and 'exp' in data:
-			gend , exp = gen_signature(secret, key, exp = data['exp'])
+			gend , exp = gen_signature(secret, key, extra, exp = data['exp'])
 			if hmac.compare_digest(gend, data['sig']):
 				if is_expired(data['exp']):
-					_log.debug('Token %s for %s is expired'%(token, h125(secret)))
+					_log.debug('Token %s for %s is expired'%(token, h512(secret)))
 					return False
 				return True
 			else:
@@ -58,9 +58,9 @@ def check_token(secret, key, token):
 				_log.debug('%s - %s'%(gend, data['sig']))
 		else:
 			_log.debug('Not enough info in token')
-	except:
+	except Exception as e:
 		_log.debug('Failed to decode token %s'%token)
-		pass
+		_log.exception(e)
 	return False
 
 def token_info(token):

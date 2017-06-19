@@ -24,6 +24,7 @@ def timestamp(offset = None):
 
 def is_expired(timestamp):
 	t = datetime.strptime(timestamp, config.token.timestamp.format)
-	return t < datetime.utcnow()
+	return t <= datetime.utcnow()
 
-
+def from_timestamp(timestamp):
+	return datetime.strptime(timestamp, config.token.timestamp.format)

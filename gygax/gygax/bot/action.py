@@ -65,16 +65,17 @@ class RegisterAction(Action):
 
 	def _process(self, event):
 		self._log.debug('Recieved registration command for user %s'%event.user)
-		# user = from_slack(event.user)
-		user = False
+		user = from_slack(event.user)
 		if not user:
 			user = create_user(slack = event.user)
 			self._log.info('Created account for %s'%user.slack.name)
+		if not user.slack.confirmed:
 			self._log.debug('Pushing SlackValidationEvent for %s'%event.user)
 			ev = SlackValidationEvent('user_validate', dict(user=event.user))
-			self._put(ev)
-			
-		self._log.debug('user %s already in database'%event.user)
+		else:
+			self._log.debug('user %s already in database'%event.user)
+			ev = SendMessageEvent('msg_send', dict(user=event.user, text=config.resp.already_registered))				
+		self._put(ev)		
 
 class ValidateSlackAction(Action):
 	'''
@@ -93,7 +94,7 @@ class ValidateSlackAction(Action):
 				self._log.info('Successfully linked 42 uid %s with slack %s'%(user.uid, user.slack.name))
 				ev = SendMessageEvent('msg_send', dict(user=event.user, 
 									template=config.resp.registration_success,
-									 args=dict(uid=user.uid)))
+									args=dict(uid=user.uid)))
 				self._put(ev)
 			else:
 				self._log.error('Failed to link 42 uid %s with slack %s'%(event.uid, event.user))
@@ -101,8 +102,17 @@ class ValidateSlackAction(Action):
 			self._log.error('Failed to validate slack user %s, they probably denied our oauth request'%event.user)
 		else:
 			self._log.debug('Generating validation url for %s'%event.user)
-			url = AuthApi.validate_user(event.user)
-			ev = SendMessageEvent('msg_send', dict(user=event.user, template=config.resp.validation, args=dict(url=url)))
+			uid, url = AuthApi.validate_user(event.user)
+			if not url and not uid:
+				self._log.error('Failed to retrieve validation url for slack user %s'%event.user)
+				ev = SendMessageEvent('msg_send', dict(user=event.user, text=config.resp.register_error))
+			elif url:
+				self._log.debug('Retrieved vaidation url for %s'%event.user)
+				ev = SendMessageEvent('msg_send', dict(user=event.user, template=config.resp.validation, args=dict(url=url)))
+			elif uid:
+				self._log.debug('slack user %s is already authenticated'%event.user)
+				validate_slack(event.user, uid)
+				ev = SendMessageEvent('msg_send', dict(user=event.user, text=config.resp.already_registered))				
 			self._put(ev)
 
 
