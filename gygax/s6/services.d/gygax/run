@@ -1,0 +1,4 @@
+#!/usr/bin/with-contenv sh
+
+cd /app
+exec python server.py

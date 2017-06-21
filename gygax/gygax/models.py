@@ -19,11 +19,6 @@ targeted_users = Table('targeted_users', Base.metadata,
 				Column('user_id', Integer, ForeignKey('user.id'))
 )
 
-# slack_to_user = Table('slack_to_user', Base.metadata,
-# 				Column('slack_id', Integer, ForeignKey('slack.id')),
-# 				Column('user_id', Integer, ForeignKey('user.id')))
-
-
 class Query:
 	@property
 	def query(self):
@@ -53,6 +48,7 @@ class User(Base, Query):
 	ft_oauth_key = Column(String(64))
 	ft_oauth_refresh = Column(String(64))
 	assigned = relationship("Hit", secondary=assigned_hits, backref="assigned")
+	info_locked = Column(Boolean, default = False)
 	
 	def __init__(self, uid = None, slack = None):
 		if not uid and not slack:
@@ -79,7 +75,8 @@ class Location(Base, Query):
 	__tablename__ = 'location'
 	id = Column(Integer, primary_key = True)
 	desc = Column(Text)
-
+	user_id = Column(Integer, ForeignKey('user.id'))
+	user = relationship("User", backref=backref("location", uselist=False))
 	def __init__(self, desc):
 		self.desc = desc
 
@@ -87,7 +84,8 @@ class Weapon(Base, Query):
 	__tablename__ = 'weapon'
 	id = Column(Integer, primary_key = True)
 	desc = Column(Text)
-
+	user_id = Column(Integer, ForeignKey('user.id'))
+	user = relationship("User", backref=backref("weapon", uselist=False))
 	def __init__(self, desc):
 		self.desc = desc
 

@@ -1,0 +1,9 @@
+certifi==2017.4.17
+chardet==3.0.4
+idna==2.5
+PyYAML==3.12
+pyzmq==16.0.2
+requests==2.18.1
+SQLAlchemy==1.1.10
+urllib3==1.21.1
+zmq==0.0.0

@@ -28,7 +28,8 @@ CMD_TYPES = [
 		'NULL',
 		'REGISTER',
 		'REPORT',
-		'TARGET'
+		'TARGET',
+		'SET'
 	]
 
 CMD_TYPES = const_type('CMD_TYPES', CMD_TYPES)

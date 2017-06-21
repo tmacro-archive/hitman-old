@@ -8,11 +8,11 @@
 from ..util.log import getLogger
 from .const import CMD_TYPES as CTPYES
 from .const import EVENT_TYPES as ETYPES
-from ..api.storage import from_slack, create_user, validate_slack
+from ..api.storage import from_slack, create_user, validate_slack, set_weapon, set_location, info_locked
 from ..util.http import http
 from .events import SlackValidationEvent, MessageEvent, CommandEvent, SendMessageEvent
 from ..api import auth as AuthApi
-from ..api.slack import Slack as SlackApi
+from ..app import slack as SlackApi
 from ..util.config import config
 _log = getLogger('action')
 
@@ -49,10 +49,16 @@ class CommandAction(Action):
 	def _process(self, event):
 		self._log.debug('Processing raw command')
 		print(event.data())
+		if event.cmd_type == 'bang':
+			if not SlackApi._is_dm(event.channel):
+				self._log.debug('bang command on public channel')
+				ev = SendMessageEvent('msg_send', dict(channel=event.channel, text=config.resp.public_bang))
+				return self._put(ev)
 		if event.cmd and event.cmd.upper() in CTPYES._fields:
 			ev = CommandEvent('cmd_%s'%event.cmd, event.data(), no_parse = True)
 			self._log.debug('CommandEvent validated setting topic to %s and pushing to queue'%ev.topic)
 			self._put(ev)
+			return True
 
 class RegisterAction(Action):
 	'''
@@ -147,9 +153,54 @@ class SendMessageAction(Action):
 		if not event.text:
 			self._log.error('Outbound message has no text!')
 			return
-		ok = SlackApi.dm(event.user, event.text)
+		if event.channel:
+			ok = SlackApi.msg(event.channel, event.text)
+		else:
+			ok = SlackApi.dm(event.user, event.text)
 		if ok:
 			self._log.debug('Successfully sent message to %s'%event.user)
 		else:
 			self._log.debug('Failed to send message to %s'%event.user)
 
+class CollectInfoAction(Action):
+	def _install(self, proxy):
+		proxy.register(ETYPES.USER, 'user_info', self)
+		
+	def _process(self, event):
+		self._log.debug('Recieved info collection event for user %s'%event.user)
+		ev = SendMessageEvent('msg_send', dict(user=event.user, text = config.resp.collect_info))
+		self._put(ev)
+
+class SetInfoAction(Action):
+	def _install(self, proxy):
+		proxy.register(ETYPES.CMD, 'cmd_set', self)
+
+	def _process(self, event):
+		self._log.debug('Recieved set info event for user %s'%event.user)
+		if not event.args:
+			ev = SendMessageEvent('msg_send', dict(user=event.user, text = config.resp.info_set_usage))
+			self._put(ev)
+			return
+		target = event.args[0]
+		if not target in ['weapon', 'location']:
+			ev = SendMessageEvent('msg_send', dict(user=event.user, text = config.resp.info_set_usage))
+		else:
+			if info_locked(event.user):
+				ev = SendMessageEvent('msg_send', dict(user=event.user, text = 'You can;t update your %s in the middle of a game!'%target))
+			value = ' '.join(event.args[1:])
+			self._log.debug("Updating %s's %s to %s"%(event.user, target, value))
+			ok = True
+			if target == 'weapon':
+				if not set_weapon(event.user, value):
+					ok = False
+			if target == 'location':
+				if not set_location(event.user, value):
+					ok = False
+			if ok:
+				ev = SendMessageEvent('msg_send', dict(user=event.user, 
+												template = config.resp.info_set_confirm, 
+												args = dict(key=target, value=value)))
+			else:
+				ev = SendMessageEvent('msg_send', dict(user=event.user,
+												text = 'There was a probem updating you %s, please try again'%target))
+		self._put(ev)	

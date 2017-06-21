@@ -18,17 +18,27 @@ class MessageEvent(Event):
 
 class CommandEvent(MessageEvent):
 	type = ETYPES.CMD
+	bang_cmd = r'^!(?P<cmd>[a-z]{3,10})(?:[ \t]+(?P<args>[\w ]+))?'
+	at_cmd = r'^<@(?P<user>\w+)>\s(?P<cmd>[a-z]{3,10})(?:[ \t]+(?P<args>[\w ]+))?'
 	def __init__(self, *args, no_parse = False, **kwargs):
 		super().__init__(*args, **kwargs)
 		if not no_parse:
-			cmd, args = self._parse(self.text)
+			type, cmd, args = self._parse(self.text)
+			self._set('cmd_type', type)
 			self._set('cmd', cmd)
 			self._set('args', args)
 	
+	def _parse_args(self, args):
+		if not args is None:
+			return args.split(' ')
+
 	def _parse(self, text):
-		match = re.match(r'^!([a-z]{3,10}) ?([\w ]+)?', self.text)
-		cmd = match.group(1) if match else None
-		args = match.group(2).split(' ') if match and match.group(2) else []
+		match = re.match(self.bang_cmd, self.text)
+		if match:
+			return 'bang', match['cmd'], self._parse_args(match['args'])
+		match = re.match(self.at_cmd, text)
+		if match:
+			return 'at', match['cmd'], self._parse_args(match['args'])
 		return cmd, args
 
 	@property
@@ -37,6 +47,10 @@ class CommandEvent(MessageEvent):
 	@property
 	def args(self):
 		return self._get('args')
+	
+	@property
+	def cmd_type(self):
+		return self._get('cmd_type')
 
 class SlackValidationEvent(Event):
 	type = ETYPES.USER

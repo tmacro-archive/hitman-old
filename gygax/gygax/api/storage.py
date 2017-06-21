@@ -78,6 +78,38 @@ def validate_slack(session, slack, uid = None):
 		return [user], True, False
 	return None, False
 	
-def saveDB(obj):
-	db.session.add(obj)
-	db.session.commit()
+@session
+def create_weapon(desc):
+	w = Weapon(desc)
+	return [w], True, False
+
+@session
+def create_location(desc):
+	l = Location(desc)
+	return [l], True, False
+
+@session
+def set_weapon(session, slack, weapon):
+	user = from_slack(slack)
+	if not user.weapon:
+		w = create_weapon(weapon)
+		user.weapon = w
+	else:
+		w = user.weapon
+		w.desc = weapon
+	return [user, w], True, False
+
+@session
+def set_location(session, slack, location):
+	user = from_slack(slack)
+	if not user.location:
+		l = create_location(location)
+		user.location = l
+	else:
+		l = user.location
+		l.desc = location
+	return [user, l], True, False
+
+def info_locked(query, slack):
+	user = from_slack(slack)
+	return user.info_locked

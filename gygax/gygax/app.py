@@ -21,6 +21,7 @@ agent = Agent()
 # agent.start()
 
 # app.start()
+slack = Slack(agent.put)
 
 from .bot.action import CommandAction
 cmd_action = CommandAction(agent.proxy)
@@ -34,4 +35,9 @@ msg_action = SendMessageAction(agent.proxy)
 from .bot.action import ValidateSlackAction
 valid_action = ValidateSlackAction(agent.proxy)
 
-slack = Slack(agent.put)
+from .bot.action import CollectInfoAction
+col_action = CollectInfoAction(agent.proxy)
+
+from .bot.action import SetInfoAction
+set_action = SetInfoAction(agent.proxy)
+

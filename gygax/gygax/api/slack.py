@@ -83,6 +83,14 @@ class Slack:
 			for u in users:
 				if u['name'] == user:
 					return u['id']
+	
+	def _is_dm(self, channel):
+		if channel in self._user_map:
+			return True
+		for ch in Slack._get_dms():
+			if ch['id'] == channel:
+				return True
+		return False
 
 	@staticmethod
 	def _create_dm(user):
@@ -95,16 +103,33 @@ class Slack:
 		return None
 
 	@staticmethod
-	def dm(user_id, message):
-		dm = Slack._get_dm_user(user_id)
-		if not dm:
-			dm = Slack._create_dm(user_id)
-		if not dm:
-			raise Exception('could not create direct message.')
-		data = dict(channel = dm, text = message)
+	def _send_message(channel, message):
+		data = dict(channel = channel, text = message)
 		data.update(default_data)
 		resp = requests.post(build_url(config.apiSlack.post_msg),
 							data = data)
 		if reqOk(resp):
 			return True
 		return False
+	
+	def msg(self, channel, message):
+		return Slack._send_message(channel, message)
+
+	def dm(self, user_id, message, cached = True):
+		dm = self._user_map.get(user_id)
+		if not dm:
+			cached = False
+			dm = Slack._get_dm_user(user_id)
+		if not dm:
+			dm = Slack._create_dm(user_id)
+		if not dm:
+			raise Exception('could not create direct message.')
+		if not Slack._send_message(dm, message):
+			if cached:
+				self._user_map.pop(user_id)
+				return dm(user_id, message)
+			else:
+				return False
+		self._user_map[user_id] = dm
+		return True
+		
