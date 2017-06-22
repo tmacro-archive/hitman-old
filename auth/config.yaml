@@ -1,0 +1,38 @@
+meta:
+  app: hitmanHQ
+
+token:
+  ttl: 10m
+  timestamp:
+    format: '%Y-%m-%d-%H:%M:%S'
+
+intra:
+  key: <DEV_KEY_REPLACE_ME>
+  secret: <DEV_KEY_REPLACE_ME>
+  
+crypto:
+  key: <DEV_KEY_REPLACE_ME>
+  secret: <DEV_KEY_REPLACE_ME>
+
+http:
+  name: 3d9d9226.ngrok.io
+
+api42:
+  base: https://api.intra.42.fr
+  info: /v2/me
+
+api:
+  gygax: http://localhost:8082/slack_authorized
+
+content:
+  no_token: >
+    You've found the registration page for HIPHOP!
+    Though you've made it this far, you haven't 
+    brought any tokens with you to get through.
+    Looks like you'll have to go back all the way
+    to slack to get some...
+  already_registered: >
+    Looks like you've already registered for hitman.
+    While I could register you again, I don't think
+    that would be very fun for either one of us.
+    
